@@ -43,76 +43,94 @@ export default function App() {
   }
 
   return (
-    <div className="page">
-      <header>
-        <h1>Claims Intelligence</h1>
-        <p className="lede">
-          Evaluator attaches the study. We store a first-pass read on whether
-          it actually supports the wording of the claim.
-        </p>
+    <div className="shell">
+      <header className="top">
+        <div className="lockup">
+          <span className="wordmark">L&apos;Oréal</span>
+          <span className="paris">Paris</span>
+        </div>
+        <span className="unit">Recherche &amp; Innovation</span>
       </header>
 
-      <form onSubmit={onSubmit}>
-        <label>
-          Product
-          <input
-            value={productName}
-            onChange={(e) => setProductName(e.target.value)}
-          />
-        </label>
-        <label>
-          Formula
-          <input
-            value={formula}
-            onChange={(e) => setFormula(e.target.value)}
-          />
-        </label>
-        <label>
-          Claim
-          <textarea
-            required
-            minLength={10}
-            rows={3}
-            value={claimText}
-            onChange={(e) => setClaimText(e.target.value)}
-          />
-        </label>
-        <label>
-          Clinical evidence
-          <textarea
-            required
-            minLength={20}
-            rows={7}
-            value={evidence}
-            onChange={(e) => setEvidence(e.target.value)}
-          />
-        </label>
-        <button type="submit" disabled={busy}>
-          {busy ? 'Assessing…' : 'Assess claim'}
-        </button>
-      </form>
+      <main className="page">
+        <p className="kicker">Evaluator desk · claim substantiation</p>
+        <h1>Claims Intelligence</h1>
+        <p className="lede">
+          Attach the clinical write-up against the claim wording. This is a
+          first pass for R&amp;I — evaluation still signs off.
+        </p>
 
-      {err && <p className="err">{err}</p>}
+        <div className="work">
+          <form onSubmit={onSubmit}>
+            <label>
+              Product
+              <input
+                value={productName}
+                onChange={(e) => setProductName(e.target.value)}
+              />
+            </label>
+            <label>
+              Formula
+              <input
+                value={formula}
+                onChange={(e) => setFormula(e.target.value)}
+              />
+            </label>
+            <label>
+              Claim
+              <textarea
+                required
+                minLength={10}
+                rows={3}
+                value={claimText}
+                onChange={(e) => setClaimText(e.target.value)}
+              />
+            </label>
+            <label>
+              Clinical evidence
+              <textarea
+                required
+                minLength={20}
+                rows={7}
+                value={evidence}
+                onChange={(e) => setEvidence(e.target.value)}
+              />
+            </label>
+            <button type="submit" disabled={busy}>
+              {busy ? 'Assessing…' : 'Assess claim'}
+            </button>
+            {err && <p className="err">{err}</p>}
+          </form>
 
-      {result && (
-        <section className="result">
-          <h2>Assessment</h2>
-          <dl>
-            <div>
-              <dt>Justified</dt>
-              <dd className={result.justified ? 'yes' : 'no'}>
-                {result.justified ? 'Yes' : 'No'}
-              </dd>
-            </div>
-            <div>
-              <dt>Confidence Score</dt>
-              <dd>{Math.round(result.confidence * 100)}%</dd>
-            </div>
-          </dl>
-          <h3>Reasoning</h3>
-          <p>{result.reasoning}</p>
-        </section>
-      )}
+          <section className={'result' + (result ? ' has' : '')}>
+            {!result && (
+              <p className="placeholder">
+                Assessment will show here — Justified, Confidence Score,
+                Reasoning.
+              </p>
+            )}
+            {result && (
+              <>
+                <h2>Assessment</h2>
+                <dl>
+                  <div>
+                    <dt>Justified</dt>
+                    <dd className={result.justified ? 'yes' : 'no'}>
+                      {result.justified ? 'Yes' : 'No'}
+                    </dd>
+                  </div>
+                  <div>
+                    <dt>Confidence Score</dt>
+                    <dd>{Math.round(result.confidence * 100)}%</dd>
+                  </div>
+                </dl>
+                <h3>Reasoning</h3>
+                <p>{result.reasoning}</p>
+              </>
+            )}
+          </section>
+        </div>
+      </main>
     </div>
   );
 }
