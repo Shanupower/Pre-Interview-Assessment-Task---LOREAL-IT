@@ -126,8 +126,7 @@ label > span {
 }
 
 input,
-textarea,
-select {
+textarea {
   display: block;
   width: 100%;
   font-family: Helvetica, Arial, sans-serif;
@@ -135,53 +134,32 @@ select {
   font-weight: 400;
   letter-spacing: normal;
   text-transform: none;
-  line-height: 1.4;
+  line-height: 1.45;
   color: #111;
   background: #fff;
   border: 1px solid #cfc6b8;
   border-radius: 0;
-  padding: 10px 12px;
+  padding: 9px 11px;
 }
 
-select {
-  height: 42px;
-  cursor: pointer;
-  appearance: none;
-  -webkit-appearance: none;
-  background-color: #fff;
-  background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='12' height='8'><path fill='%23111' d='M0 0l6 8 6-8z'/></svg>");
-  background-repeat: no-repeat;
-  background-position: right 12px center;
-  background-size: 10px 7px;
-  padding-right: 34px;
-}
-
-select option {
-  font-family: Helvetica, Arial, sans-serif;
-  font-size: 14px;
-  letter-spacing: normal;
-  text-transform: none;
-  color: #111;
-  background: #fff;
+input {
+  height: 40px;
 }
 
 input::placeholder,
 textarea::placeholder {
   color: #9a9084;
-  letter-spacing: normal;
-  text-transform: none;
 }
 
 input:focus,
-textarea:focus,
-select:focus {
+textarea:focus {
   outline: none;
   border-color: #c4a574;
 }
 
 textarea {
-  resize: vertical;
-  min-height: 92px;
+  resize: none;
+  overflow: auto;
 }
 
 button {
@@ -205,6 +183,61 @@ button:hover:not(:disabled) {
 button:disabled {
   opacity: 0.4;
   cursor: default;
+}
+
+button.back {
+  margin: 0 0 18px;
+  padding: 0;
+  background: none;
+  color: #8a7a62;
+  letter-spacing: 0.08em;
+  font-size: 11px;
+}
+
+button.back:hover:not(:disabled) {
+  background: none;
+  color: #111;
+}
+
+.plist {
+  list-style: none;
+  margin: 22px 0 0;
+  padding: 0;
+  border-top: 1px solid #e5ddd0;
+}
+
+.plist li {
+  border-bottom: 1px solid #e5ddd0;
+}
+
+button.prod {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 4px;
+  width: 100%;
+  margin: 0;
+  padding: 14px 2px;
+  background: none;
+  color: inherit;
+  letter-spacing: 0;
+  text-transform: none;
+  text-align: left;
+}
+
+button.prod:hover:not(:disabled) {
+  background: none;
+  color: inherit;
+}
+
+.prod-name {
+  font-family: 'Bodoni Moda', 'Times New Roman', serif;
+  font-size: 20px;
+}
+
+.prod-sub {
+  font-size: 13px;
+  color: #8a7a62;
 }
 
 .err {
