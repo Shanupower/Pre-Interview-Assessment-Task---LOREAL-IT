@@ -115,11 +115,8 @@ export default function App() {
         <span className="unit">Recherche &amp; Innovation</span>
       </header>
       <p className="key-note">
-        Assess no longer needs your OpenAI key. I wired a demo model for this
-        machine and ran it: Justified Yes, 95%, and reasoning that actually
-        compared 22% / 4 weeks / n=72 to the claim (demo:gpt-oss-20b). If you
-        later drop a key in backend/.env as OPENAI_API_KEY, it will use that
-        instead.
+        No OpenAI key needed to try Assess — a demo model runs the first pass.
+        Add OPENAI_API_KEY to backend/.env later if you want to use your own.
       </p>
 
       <main className="page">
