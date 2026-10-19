@@ -62,6 +62,152 @@ describe('ClaimsService', () => {
     expect(out.assessment.justified).toBe(true);
   });
 
+  it('does not treat retinol 0.3% as the clinical result', async () => {
+    delete process.env.OPENAI_API_KEY;
+    global.fetch = jest.fn().mockRejectedValue(new Error('offline'));
+    const claimRow = {
+      id: 'c1',
+      claimText: 'Reduces wrinkles by 20% in 4 weeks',
+      productName: 'Revitalift',
+      formula: 'retinol 0.3%',
+    };
+    const db = dbMock(claimRow);
+    await new ClaimsService(db as never).assess({
+      productName: 'Revitalift',
+      formula: 'retinol 0.3%',
+      claimText: 'Reduces wrinkles by 20% in 4 weeks',
+      evidence:
+        'Split-face instrumental study, 72 women, retinol 0.3% vs vehicle, 4 weeks. Mean wrinkle volume -22%, p<0.05.',
+    });
+    expect(db.assessment.create.mock.calls[0][0].data.justified).toBe(true);
+  });
+
+  it('does not justify a wrinkle claim with a hydration study', async () => {
+    delete process.env.OPENAI_API_KEY;
+    global.fetch = jest.fn().mockRejectedValue(new Error('offline'));
+    const claimRow = {
+      id: 'c1',
+      claimText: 'Reduces wrinkles by 20% in 4 weeks',
+      productName: 'Revitalift',
+      formula: 'retinol 0.3%',
+    };
+    const db = dbMock(claimRow);
+    await new ClaimsService(db as never).assess({
+      ...claimRow,
+      evidence:
+        'Corneometer study, 48 women, 4 weeks, retinol 0.3% vs vehicle. Skin hydration +22%, p<0.05. No wrinkle measure.',
+    });
+    expect(db.assessment.create.mock.calls[0][0].data.justified).toBe(false);
+  });
+
+  it('does not justify a 20% claim with a 12% result', async () => {
+    delete process.env.OPENAI_API_KEY;
+    global.fetch = jest.fn().mockRejectedValue(new Error('offline'));
+    const claimRow = {
+      id: 'c1',
+      claimText: 'Reduces wrinkles by 20% in 4 weeks',
+      productName: 'Revitalift',
+      formula: 'retinol 0.3%',
+    };
+    const db = dbMock(claimRow);
+    await new ClaimsService(db as never).assess({
+      ...claimRow,
+      evidence:
+        'Instrumental wrinkle study, 80 women, 4 weeks, retinol 0.3% vs vehicle. Mean wrinkle volume -12%, p<0.05.',
+    });
+    expect(db.assessment.create.mock.calls[0][0].data.justified).toBe(false);
+  });
+
+  it('does not justify consumer glow quotes against a wrinkle %', async () => {
+    delete process.env.OPENAI_API_KEY;
+    global.fetch = jest.fn().mockRejectedValue(new Error('offline'));
+    const claimRow = {
+      id: 'c1',
+      claimText: 'Reduces wrinkles by 20% in 4 weeks',
+      productName: 'Revitalift',
+      formula: 'retinol 0.3%',
+    };
+    const db = dbMock(claimRow);
+    await new ClaimsService(db as never).assess({
+      ...claimRow,
+      evidence:
+        'After 4 weeks, 9 out of 10 women said they loved the glow and felt younger. Self-assessment questionnaire only. No instrumental wrinkle data.',
+    });
+    expect(db.assessment.create.mock.calls[0][0].data.justified).toBe(false);
+  });
+
+  it('does not justify a retinol claim with a vitamin C study', async () => {
+    delete process.env.OPENAI_API_KEY;
+    global.fetch = jest.fn().mockRejectedValue(new Error('offline'));
+    const claimRow = {
+      id: 'c1',
+      claimText: 'Reduces wrinkles by 20% in 4 weeks',
+      productName: 'Revitalift',
+      formula: 'retinol 0.3%',
+    };
+    const db = dbMock(claimRow);
+    await new ClaimsService(db as never).assess({
+      ...claimRow,
+      evidence:
+        'Instrumental study of a 15% vitamin C serum, 70 women, 4 weeks. Wrinkle volume -23% vs vehicle, p<0.05. Not a retinol formula.',
+    });
+    expect(db.assessment.create.mock.calls[0][0].data.justified).toBe(false);
+  });
+
+  it('accepts a 4-week readout inside a longer study', async () => {
+    delete process.env.OPENAI_API_KEY;
+    global.fetch = jest.fn().mockRejectedValue(new Error('offline'));
+    const claimRow = {
+      id: 'c1',
+      claimText: 'Reduces wrinkles by 20% in 4 weeks',
+      productName: 'Revitalift',
+      formula: 'retinol 0.3%',
+    };
+    const db = dbMock(claimRow);
+    await new ClaimsService(db as never).assess({
+      ...claimRow,
+      evidence:
+        '12-week instrumental study, 90 women, retinol 0.3% vs vehicle. At week 4, wrinkle volume -21%, p<0.05. At week 12, -28%, p<0.01.',
+    });
+    expect(db.assessment.create.mock.calls[0][0].data.justified).toBe(true);
+  });
+
+  it('rejects a longer study that never reports the claimed timepoint', async () => {
+    delete process.env.OPENAI_API_KEY;
+    global.fetch = jest.fn().mockRejectedValue(new Error('offline'));
+    const claimRow = {
+      id: 'c1',
+      claimText: 'Reduces wrinkles by 20% in 4 weeks',
+      productName: 'Revitalift',
+      formula: 'retinol 0.3%',
+    };
+    const db = dbMock(claimRow);
+    await new ClaimsService(db as never).assess({
+      ...claimRow,
+      evidence:
+        '12-week instrumental study, 90 women, retinol 0.3% vs vehicle. Only a week-12 readout: wrinkle volume -28%, p<0.01. No 4-week timepoint reported.',
+    });
+    expect(db.assessment.create.mock.calls[0][0].data.justified).toBe(false);
+  });
+
+  it('can justify an unquantified hydration claim', async () => {
+    delete process.env.OPENAI_API_KEY;
+    global.fetch = jest.fn().mockRejectedValue(new Error('offline'));
+    const claimRow = {
+      id: 'c1',
+      claimText: 'Improves skin hydration in 2 weeks',
+      productName: 'Revitalift',
+      formula: 'HA 1%',
+    };
+    const db = dbMock(claimRow);
+    await new ClaimsService(db as never).assess({
+      ...claimRow,
+      evidence:
+        'Corneometer study, 48 women, HA 1% vs vehicle, 2 weeks. Hydration +18% vs vehicle, p<0.05.',
+    });
+    expect(db.assessment.create.mock.calls[0][0].data.justified).toBe(true);
+  });
+
   it('does not justify a 4-week claim with a 2-week study', async () => {
     delete process.env.OPENAI_API_KEY;
     global.fetch = jest.fn().mockRejectedValue(new Error('offline'));
