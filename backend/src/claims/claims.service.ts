@@ -163,7 +163,7 @@ export class ClaimsService {
     return {
       justified: false,
       confidence: 0.38,
-        reasoning:
+      reasoning:
         'Duration lines up but the magnitude or statistical support in the write-up is too thin for the claim as worded.',
       model: 'local-fallback',
     };

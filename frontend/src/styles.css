@@ -315,6 +315,13 @@ dd {
   color: #333;
 }
 
+.model {
+  margin-top: 10px;
+  font-size: 11px;
+  color: #8a7a62;
+  letter-spacing: 0.04em;
+}
+
 .history {
   margin-top: 28px;
 }

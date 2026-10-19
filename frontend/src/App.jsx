@@ -40,6 +40,7 @@ export default function App() {
           justified: a.justified,
           confidence: a.confidence,
           reasoning: a.reasoning,
+          model: a.model,
           createdAt: a.createdAt,
         });
       }
@@ -249,6 +250,7 @@ export default function App() {
                     </dl>
                     <h3>Reasoning</h3>
                     <p>{result.reasoning}</p>
+                    {result.model && <p className="model">{result.model}</p>}
                   </>
                 )}
                 {history.length > 0 && (
