@@ -4,7 +4,19 @@ L'Oréal R&I asked for the core of a Claims Intelligence Engine: a scientist’s
 
 This repo is that slice. It runs. The rest of this file is the thinking they asked for.
 
-## Run it
+## Live demo (no setup)
+
+GitHub Pages, in-browser only — same screens, history in `localStorage`. Nest/Prisma/OpenAI are not behind this URL; that’s `docker compose`.
+
+After the repo is on GitHub and Pages is set to **GitHub Actions**:
+
+https://\<you\>.github.io/\<repo\>/
+
+First visit already has a Revitalift example. Open it, or New product and Assess. A 4-week claim against a 2-week study should come back No.
+
+The workflow is `.github/workflows/pages.yml`. It builds on every push to `main`.
+
+## Run it locally
 
 Docker Desktop:
 

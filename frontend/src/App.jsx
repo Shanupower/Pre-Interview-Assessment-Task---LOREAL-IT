@@ -1,6 +1,5 @@
 import { useEffect, useState } from 'react';
-
-const API = 'http://localhost:3000/api/claims';
+import { DEMO, assess, history, listProducts } from './api';
 
 export default function App() {
   const [screen, setScreen] = useState('list');
@@ -13,52 +12,31 @@ export default function App() {
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState('');
   const [result, setResult] = useState(null);
-  const [history, setHistory] = useState([]);
+  const [past, setPast] = useState([]);
 
-  async function loadProducts() {
-    const res = await fetch(`${API}/products`);
-    if (!res.ok) return;
-    setProducts(await res.json());
+  async function refreshProducts() {
+    setProducts(await listProducts());
   }
 
-  async function loadHistory(name) {
+  async function refreshHistory(name) {
     if (!name) {
-      setHistory([]);
+      setPast([]);
       return [];
     }
-    const res = await fetch(`${API}?product=${encodeURIComponent(name)}`);
-    if (!res.ok) return [];
-    const claims = await res.json();
-    const rows = [];
-    for (const c of claims) {
-      for (const a of c.assessments) {
-        rows.push({
-          id: a.id,
-          claimText: c.claimText,
-          formula: c.formula,
-          evidence: a.evidence,
-          justified: a.justified,
-          confidence: a.confidence,
-          reasoning: a.reasoning,
-          model: a.model,
-          createdAt: a.createdAt,
-        });
-      }
-    }
-    rows.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
-    setHistory(rows);
+    const rows = await history(name);
+    setPast(rows);
     return rows;
   }
 
   useEffect(() => {
-    loadProducts().catch(() => {});
+    refreshProducts().catch(() => {});
   }, []);
 
   function goList() {
     setScreen('list');
     setResult(null);
     setErr('');
-    loadProducts().catch(() => {});
+    refreshProducts().catch(() => {});
   }
 
   function startNew() {
@@ -67,7 +45,7 @@ export default function App() {
     setFormula('');
     setClaimText('');
     setEvidence('');
-    setHistory([]);
+    setPast([]);
     setResult(null);
     setErr('');
     setScreen('form');
@@ -79,7 +57,7 @@ export default function App() {
     setFormula(p.formula || '');
     setResult(null);
     setErr('');
-    const rows = await loadHistory(p.name);
+    const rows = await refreshHistory(p.name);
     const last = rows[0];
     if (last) {
       setFormula(last.formula || p.formula || '');
@@ -100,25 +78,22 @@ export default function App() {
     setResult(null);
     setBusy(true);
     try {
-      const res = await fetch(`${API}/assess`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ productName: name, formula, claimText, evidence }),
+      const assessment = await assess({
+        productName: name,
+        formula,
+        claimText,
+        evidence,
       });
-      const data = await res.json().catch(() => ({}));
-      if (!res.ok) {
-        const msg = Array.isArray(data.message)
-          ? data.message.join(', ')
-          : data.message || 'Request failed';
-        setErr(String(msg));
-        return;
-      }
-      setResult(data.assessment);
+      setResult(assessment);
       setIsNew(false);
-      await loadProducts();
-      await loadHistory(name);
-    } catch {
-      setErr('Cannot reach the API — is the backend up on :3000?');
+      await refreshProducts();
+      await refreshHistory(name);
+    } catch (ex) {
+      setErr(
+        DEMO
+          ? String(ex.message || ex)
+          : 'Cannot reach the API — is the backend up on :3000?',
+      );
     } finally {
       setBusy(false);
     }
@@ -134,8 +109,9 @@ export default function App() {
         <span className="unit">Recherche &amp; Innovation</span>
       </header>
       <p className="key-note">
-        No OpenAI key needed to try Assess — a demo model runs the first pass.
-        Add OPENAI_API_KEY to backend/.env later if you want to use your own.
+        {DEMO
+          ? 'Hosted demo — Assess runs in the browser, history stays on this machine. Full Nest/Prisma stack is in the repo (docker compose up).'
+          : 'No OpenAI key needed to try Assess — a demo model runs the first pass. Add OPENAI_API_KEY to backend/.env later if you want to use your own.'}
       </p>
 
       <main className="page">
@@ -226,8 +202,8 @@ export default function App() {
                 {err && <p className="err">{err}</p>}
               </form>
 
-              <section className={'result' + (result || history.length ? ' has' : '')}>
-                {!result && !history.length && (
+              <section className={'result' + (result || past.length ? ' has' : '')}>
+                {!result && !past.length && (
                   <p className="placeholder">
                     Assessment will show here — Justified, Confidence Score,
                     Reasoning.
@@ -253,11 +229,11 @@ export default function App() {
                     {result.model && <p className="model">{result.model}</p>}
                   </>
                 )}
-                {history.length > 0 && (
+                {past.length > 0 && (
                   <div className="history">
                     <h3>History</h3>
                     <ul>
-                      {history.map((row) => (
+                      {past.map((row) => (
                         <li key={row.id}>
                           <button
                             type="button"
