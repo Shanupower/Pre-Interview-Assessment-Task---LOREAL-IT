@@ -1,7 +1,7 @@
 import { HttpException, HttpStatus, Injectable } from '@nestjs/common';
 import OpenAI from 'openai';
 import { PrismaService } from '../prisma';
-import { AssessClaimDto } from './assess.dto';
+import { AssessClaimDto, SubmitClaimDto } from './assess.dto';
 
 @Injectable()
 export class ClaimsService {
@@ -10,15 +10,24 @@ export class ClaimsService {
   async listProducts() {
     const rows = await this.db.claim.findMany({
       orderBy: { updatedAt: 'desc' },
-      select: { productName: true, formula: true },
+      select: {
+        productName: true,
+        formula: true,
+        assessments: { select: { id: true } },
+      },
     });
+    const waiting = new Set<string>();
+    for (const r of rows) {
+      const n = r.productName?.trim();
+      if (n && (r.assessments?.length ?? 0) === 0) waiting.add(n);
+    }
     const seen = new Set<string>();
-    const out: { name: string; formula: string | null }[] = [];
+    const out: { name: string; formula: string | null; waiting: boolean }[] = [];
     for (const r of rows) {
       const name = r.productName?.trim();
       if (!name || seen.has(name)) continue;
       seen.add(name);
-      out.push({ name, formula: r.formula });
+      out.push({ name, formula: r.formula, waiting: waiting.has(name) });
     }
     return out;
   }
@@ -33,21 +42,33 @@ export class ClaimsService {
     });
   }
 
-  async assess(dto: AssessClaimDto) {
-    const claim = await this.db.claim.create({
+  submit(dto: SubmitClaimDto) {
+    return this.db.claim.create({
       data: {
         claimText: dto.claimText,
         productName: dto.productName,
         formula: dto.formula,
       },
     });
+  }
 
-    const judged = await this.askModel(dto);
+  async attachStudy(claimId: string, evidence: string) {
+    const claim = await this.db.claim.findUnique({ where: { id: claimId } });
+    if (!claim) {
+      throw new HttpException('claim not found', HttpStatus.NOT_FOUND);
+    }
+
+    const judged = await this.askModel({
+      claimText: claim.claimText,
+      productName: claim.productName ?? '',
+      formula: claim.formula ?? undefined,
+      evidence,
+    });
 
     const assessment = await this.db.assessment.create({
       data: {
         claimId: claim.id,
-        evidence: dto.evidence,
+        evidence,
         justified: judged.justified,
         confidence: judged.confidence,
         reasoning: judged.reasoning,
@@ -56,6 +77,11 @@ export class ClaimsService {
     });
 
     return { claim, assessment };
+  }
+
+  async assess(dto: AssessClaimDto) {
+    const claim = await this.submit(dto);
+    return this.attachStudy(claim.id, dto.evidence);
   }
 
   private async askModel(dto: AssessClaimDto) {

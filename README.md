@@ -10,9 +10,9 @@ GitHub Pages, in-browser only — same screens, history in `localStorage`. Nest/
 
 After the repo is on GitHub and Pages is set to **GitHub Actions**:
 
-https://\<you\>.github.io/\<repo\>/
+https://shanupower.github.io/Pre-Interview-Assessment-Task---LOREAL-IT/
 
-First visit already has a Revitalift example. Open it, or New product and Assess. A 4-week claim against a 2-week study should come back No.
+First visit has a Revitalift product: one claim waiting for a study, one already assessed. Open it, attach a write-up, Assess. Or **Submit formula** as the scientist first. A 4-week claim against a 2-week study should come back No.
 
 The workflow is `.github/workflows/pages.yml`. It builds on every push to `main`.
 
@@ -39,7 +39,12 @@ cd backend && npm install && npx prisma migrate dev && npm run start:dev
 cd frontend && npm install && npm run dev
 ```
 
-What to click: **New product**, fill a claim and a study, **Assess claim**. Open a product from the list to see history. Try a 4-week claim against a 2-week study — that’s the interesting case.
+What to click: **Submit formula** (scientist — product, formula, claim). That lands on the evaluator desk with no study yet. Paste the clinical write-up → **Attach study & assess**. Open Revitalift to see a claim already waiting. Try a 4-week claim against a 2-week study.
+
+`POST /api/claims` — scientist files the formula  
+`POST /api/claims/:id/assess` — evaluator attaches the study  
+
+Still supported (one-shot, as the brief asked):
 
 `POST /api/claims/assess`
 
@@ -60,7 +65,7 @@ Business puts a product on the table with a pile of claims. Some are ambitious (
 
 The expensive mistake sits after that: treating a study as if it automatically carries the wording of the claim. A clean 2-week wrinkle study does not support a 4-week claim, even if the graph looks great.
 
-That’s the slice I built. `POST /api/claims/assess` is the evaluator desk — evidence in, a first-pass read on whether the study speaks to the claim, row in the database, shown in the UI. I didn’t build the manager queue or the formulation lab. Those are real stages. They weren’t the core feature.
+That’s the slice I built. Scientist hits **Submit formula** (`POST /api/claims`) — product, formula, claim, no study yet. Evaluator opens the product, attaches the clinical write-up (`POST /api/claims/:id/assess`), and we store Justified / Confidence / Reasoning. The one-shot `POST /api/claims/assess` is still there because that’s what the brief named. I didn’t build the manager queue. That wasn’t the core feature.
 
 ## Research performed designing the solution
 
@@ -79,7 +84,7 @@ They asked for NestJS, Claim + Assessment, one POST, and React. That’s the sta
 - **Prisma + SQLite** instead of TypeORM + Postgres so a reviewer isn’t standing up a database for two tables. The schema doesn’t care; swap the datasource later.
 - **Append-only assessments.** Overwriting yesterday’s result would make an audit trail lie.
 - **One module.** `ClaimsController` / `ClaimsService` / `assess.dto`. The OpenAI call lives in the service. I didn’t invent an `ILlmAssessor` for a take-home.
-- **Two screens, not a router.** Product list from the database, then the assess form. History is on the product, not jammed into a dropdown. New product starts empty.
+- **Scientist then evaluator, not one form.** Claim is filed first. Assessment only exists once a study is attached. Product list shows “waiting on study” when that’s the case.
 - **Models.** `gpt-4o-mini` if `OPENAI_API_KEY` is set. Otherwise a demo model so Assess isn’t dead on a laptop. If that call fails, a local check on duration / magnitude / stats language. I would not send unpublished formulas to a public demo from a real R&I network — that’s a review convenience, called out on the screen.
 - **Docker Compose** so Node versions aren’t part of the exercise.
 

@@ -1,30 +1,36 @@
 import { useEffect, useState } from 'react';
-import { DEMO, assess, history, listProducts } from './api';
+import {
+  DEMO,
+  attachStudy,
+  listClaims,
+  listProducts,
+  submitClaim,
+} from './api';
 
 export default function App() {
   const [screen, setScreen] = useState('list');
   const [products, setProducts] = useState([]);
   const [productName, setProductName] = useState('');
-  const [isNew, setIsNew] = useState(false);
   const [formula, setFormula] = useState('');
   const [claimText, setClaimText] = useState('');
   const [evidence, setEvidence] = useState('');
+  const [claims, setClaims] = useState([]);
+  const [activeId, setActiveId] = useState('');
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState('');
   const [result, setResult] = useState(null);
-  const [past, setPast] = useState([]);
+
+  const pending = claims.filter((c) => !c.assessments?.length);
+  const done = claims.filter((c) => c.assessments?.length);
+  const active = claims.find((c) => c.id === activeId);
 
   async function refreshProducts() {
     setProducts(await listProducts());
   }
 
-  async function refreshHistory(name) {
-    if (!name) {
-      setPast([]);
-      return [];
-    }
-    const rows = await history(name);
-    setPast(rows);
+  async function refreshClaims(name) {
+    const rows = await listClaims(name);
+    setClaims(rows);
     return rows;
   }
 
@@ -36,38 +42,31 @@ export default function App() {
     setScreen('list');
     setResult(null);
     setErr('');
+    setActiveId('');
     refreshProducts().catch(() => {});
   }
 
-  function startNew() {
-    setIsNew(true);
+  function startScientist() {
     setProductName('');
     setFormula('');
     setClaimText('');
-    setEvidence('');
-    setPast([]);
-    setResult(null);
     setErr('');
-    setScreen('form');
+    setScreen('scientist');
   }
 
   async function openProduct(p) {
-    setIsNew(false);
     setProductName(p.name);
     setFormula(p.formula || '');
+    setEvidence('');
     setResult(null);
     setErr('');
-    const rows = await refreshHistory(p.name);
-    const last = rows[0];
-    if (last) {
-      setFormula(last.formula || p.formula || '');
-      setClaimText(last.claimText);
-      setEvidence(last.evidence);
-    }
-    setScreen('form');
+    const rows = await refreshClaims(p.name);
+    const wait = rows.find((c) => !c.assessments?.length);
+    setActiveId(wait ? wait.id : rows[0]?.id || '');
+    setScreen('desk');
   }
 
-  async function onSubmit(e) {
+  async function onSubmitClaim(e) {
     e.preventDefault();
     const name = productName.trim();
     if (!name) {
@@ -75,28 +74,55 @@ export default function App() {
       return;
     }
     setErr('');
-    setResult(null);
     setBusy(true);
     try {
-      const assessment = await assess({
+      const claim = await submitClaim({
         productName: name,
         formula,
         claimText,
-        evidence,
       });
-      setResult(assessment);
-      setIsNew(false);
+      setProductName(name);
+      setEvidence('');
+      setResult(null);
+      const rows = await refreshClaims(name);
+      setActiveId(claim.id);
+      setScreen('desk');
       await refreshProducts();
-      await refreshHistory(name);
     } catch (ex) {
-      setErr(
-        DEMO
-          ? String(ex.message || ex)
-          : 'Cannot reach the API — is the backend up on :3000?',
-      );
+      setErr(DEMO ? String(ex.message || ex) : 'Cannot reach the API — is the backend up on :3000?');
     } finally {
       setBusy(false);
     }
+  }
+
+  async function onAttach(e) {
+    e.preventDefault();
+    if (!activeId) {
+      setErr('Pick a claim waiting for a study.');
+      return;
+    }
+    setErr('');
+    setResult(null);
+    setBusy(true);
+    try {
+      const assessment = await attachStudy(activeId, evidence);
+      setResult(assessment);
+      const rows = await refreshClaims(productName);
+      const wait = rows.find((c) => !c.assessments?.length);
+      setActiveId(wait ? wait.id : activeId);
+      setEvidence('');
+      await refreshProducts();
+    } catch (ex) {
+      setErr(DEMO ? String(ex.message || ex) : 'Cannot reach the API — is the backend up on :3000?');
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  function pickDone(claim, assessment) {
+    setActiveId(claim.id);
+    setResult(assessment);
+    setEvidence(assessment.evidence);
   }
 
   return (
@@ -110,21 +136,22 @@ export default function App() {
       </header>
       <p className="key-note">
         {DEMO
-          ? 'Hosted demo — Assess runs in the browser, history stays on this machine. Full Nest/Prisma stack is in the repo (docker compose up).'
-          : 'No OpenAI key needed to try Assess — a demo model runs the first pass. Add OPENAI_API_KEY to backend/.env later if you want to use your own.'}
+          ? 'Hosted demo — data stays in this browser. Scientist submits the formula; evaluator attaches the study. Full stack is docker compose up.'
+          : 'Scientist submits formula + claim. Evaluator attaches the clinical study, then we run the first-pass assess. No OpenAI key required.'}
       </p>
 
       <main className="page">
         {screen === 'list' && (
           <>
-            <p className="kicker">Evaluator desk · claim substantiation</p>
+            <p className="kicker">Paris R&amp;I · claims desk</p>
             <h1>Claims Intelligence</h1>
             <p className="lede">
-              Pick a product to see what we already assessed, or start a new
-              one. First pass only — evaluation still signs off.
+              Scientist files a formula against a claim. Evaluator attaches the
+              clinical study. Then a first-pass read on whether the write-up
+              actually carries the wording.
             </p>
-            <button type="button" onClick={startNew}>
-              New product
+            <button type="button" onClick={startScientist}>
+              Submit formula
             </button>
             {products.length === 0 ? (
               <p className="placeholder">Nothing in the database yet.</p>
@@ -134,7 +161,10 @@ export default function App() {
                   <li key={p.name}>
                     <button type="button" className="prod" onClick={() => openProduct(p)}>
                       <span className="prod-name">{p.name}</span>
-                      {p.formula && <span className="prod-sub">{p.formula}</span>}
+                      <span className="prod-sub">
+                        {p.formula || '—'}
+                        {p.waiting ? ' · waiting on study' : ''}
+                      </span>
                     </button>
                   </li>
                 ))}
@@ -143,69 +173,116 @@ export default function App() {
           </>
         )}
 
-        {screen === 'form' && (
+        {screen === 'scientist' && (
           <>
             <button type="button" className="back" onClick={goList}>
               ← All products
             </button>
-            <p className="kicker">Evaluator desk · claim substantiation</p>
-            <h1>{isNew ? 'New product' : productName}</h1>
+            <p className="kicker">Scientist · formulation</p>
+            <h1>Submit a formula</h1>
             <p className="lede">
-              Attach the clinical write-up against the claim wording.
+              Lock the formula against the claim. This goes to the evaluator
+              to attach the clinical study — nothing is assessed yet.
+            </p>
+            <form onSubmit={onSubmitClaim} className="narrow">
+              <label>
+                <span>Product</span>
+                <input
+                  value={productName}
+                  onChange={(e) => setProductName(e.target.value)}
+                  placeholder="e.g. Revitalift test batch"
+                />
+              </label>
+              <label>
+                <span>Formula</span>
+                <input
+                  value={formula}
+                  onChange={(e) => setFormula(e.target.value)}
+                  placeholder="e.g. retinol 0.3%"
+                />
+              </label>
+              <label>
+                <span>Claim</span>
+                <textarea
+                  required
+                  minLength={10}
+                  rows={2}
+                  value={claimText}
+                  onChange={(e) => setClaimText(e.target.value)}
+                  placeholder="e.g. Reduces wrinkles by 20% in 4 weeks"
+                />
+              </label>
+              <button type="submit" disabled={busy}>
+                {busy ? 'Sending…' : 'Send to evaluator'}
+              </button>
+              {err && <p className="err">{err}</p>}
+            </form>
+          </>
+        )}
+
+        {screen === 'desk' && (
+          <>
+            <button type="button" className="back" onClick={goList}>
+              ← All products
+            </button>
+            <p className="kicker">Evaluator · clinical study</p>
+            <h1>{productName}</h1>
+            <p className="lede">
+              Attach the results of the clinical study to a claim the scientist
+              already filed. Then we run the first-pass assess.
             </p>
 
             <div className="work">
-              <form onSubmit={onSubmit}>
-                {isNew && (
-                  <label>
-                    <span>Product</span>
-                    <input
-                      value={productName}
-                      onChange={(e) => setProductName(e.target.value)}
-                      placeholder="e.g. Revitalift test batch"
-                    />
-                  </label>
+              <div>
+                <h3 className="block-title">Waiting on a study</h3>
+                {pending.length === 0 ? (
+                  <p className="placeholder">No claims waiting.</p>
+                ) : (
+                  <ul className="plist tight">
+                    {pending.map((c) => (
+                      <li key={c.id}>
+                        <button
+                          type="button"
+                          className={'prod' + (c.id === activeId ? ' on' : '')}
+                          onClick={() => {
+                            setActiveId(c.id);
+                            setResult(null);
+                            setEvidence('');
+                          }}
+                        >
+                          <span className="prod-name sm">{c.claimText}</span>
+                          <span className="prod-sub">{c.formula || '—'}</span>
+                        </button>
+                      </li>
+                    ))}
+                  </ul>
                 )}
-                <label>
-                  <span>Formula</span>
-                  <input
-                    value={formula}
-                    onChange={(e) => setFormula(e.target.value)}
-                    placeholder="e.g. retinol 0.3%"
-                  />
-                </label>
-                <label>
-                  <span>Claim</span>
-                  <textarea
-                    required
-                    minLength={10}
-                    rows={2}
-                    value={claimText}
-                    onChange={(e) => setClaimText(e.target.value)}
-                    placeholder="e.g. Reduces wrinkles by 20% in 4 weeks"
-                  />
-                </label>
-                <label>
-                  <span>Clinical evidence</span>
-                  <textarea
-                    required
-                    minLength={20}
-                    rows={5}
-                    value={evidence}
-                    onChange={(e) => setEvidence(e.target.value)}
-                    placeholder="Paste the clinical write-up"
-                  />
-                </label>
-                <button type="submit" disabled={busy}>
-                  {busy ? 'Assessing…' : 'Assess claim'}
-                </button>
-                {err && <p className="err">{err}</p>}
-              </form>
 
-              <section className={'result' + (result || past.length ? ' has' : '')}>
-                {!result && !past.length && (
+                {active && !active.assessments?.length && (
+                  <form onSubmit={onAttach} style={{ marginTop: 22 }}>
+                    <label>
+                      <span>Clinical study results</span>
+                      <textarea
+                        required
+                        minLength={20}
+                        rows={6}
+                        value={evidence}
+                        onChange={(e) => setEvidence(e.target.value)}
+                        placeholder="Paste the evaluator’s clinical write-up"
+                      />
+                    </label>
+                    <button type="submit" disabled={busy}>
+                      {busy ? 'Assessing…' : 'Attach study & assess'}
+                    </button>
+                    {err && <p className="err">{err}</p>}
+                  </form>
+                )}
+              </div>
+
+              <section className={'result' + (result || done.length ? ' has' : '')}>
+                {!result && (
                   <p className="placeholder">
-                    Assessment will show here — Justified, Confidence Score,
+                    After the study is attached: Justified, Confidence Score,
                     Reasoning.
                   </p>
                 )}
@@ -229,32 +306,29 @@ export default function App() {
                     {result.model && <p className="model">{result.model}</p>}
                   </>
                 )}
-                {past.length > 0 && (
+                {done.length > 0 && (
                   <div className="history">
-                    <h3>History</h3>
+                    <h3>Already assessed</h3>
                     <ul>
-                      {past.map((row) => (
-                        <li key={row.id}>
-                          <button
-                            type="button"
-                            className="hist"
-                            onClick={() => {
-                              setResult(row);
-                              setFormula(row.formula || '');
-                              setClaimText(row.claimText);
-                              setEvidence(row.evidence);
-                            }}
-                          >
-                            <span className={row.justified ? 'yes' : 'no'}>
-                              {row.justified ? 'Yes' : 'No'}
-                            </span>
-                            <span className="hist-claim">{row.claimText}</span>
-                            <span className="hist-when">
-                              {new Date(row.createdAt).toLocaleString()}
-                            </span>
-                          </button>
-                        </li>
-                      ))}
+                      {done.flatMap((c) =>
+                        c.assessments.map((a) => (
+                          <li key={a.id}>
+                            <button
+                              type="button"
+                              className="hist"
+                              onClick={() => pickDone(c, a)}
+                            >
+                              <span className={a.justified ? 'yes' : 'no'}>
+                                {a.justified ? 'Yes' : 'No'}
+                              </span>
+                              <span className="hist-claim">{c.claimText}</span>
+                              <span className="hist-when">
+                                {new Date(a.createdAt).toLocaleString()}
+                              </span>
+                            </button>
+                          </li>
+                        )),
+                      )}
                     </ul>
                   </div>
                 )}

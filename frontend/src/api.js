@@ -1,27 +1,35 @@
 export const DEMO = import.meta.env.VITE_DEMO === '1';
 
 const API = 'http://localhost:3000/api/claims';
-const STORE = 'loreal-claims-demo';
+const STORE = 'loreal-claims-demo-v2';
 
 function seed() {
   const now = new Date().toISOString();
   return {
     claims: [
       {
-        id: 'seed-c',
+        id: 'seed-pending',
         productName: 'Revitalift test batch',
         formula: 'retinol 0.3%, HA 1%',
         claimText: 'Reduces wrinkles by 20% in 4 weeks',
+        createdAt: now,
+        assessments: [],
+      },
+      {
+        id: 'seed-done',
+        productName: 'Revitalift test batch',
+        formula: 'retinol 0.3%, HA 1%',
+        claimText: 'Improves skin hydration in 2 weeks',
         createdAt: now,
         assessments: [
           {
             id: 'seed-a',
             evidence:
-              'Split-face instrumental study, 72 women, 4 weeks. Mean wrinkle volume reduced 22% versus vehicle, p<0.05.',
+              'Corneometer study, 48 women, 2 weeks. Hydration +18% vs vehicle, p<0.05.',
             justified: true,
-            confidence: 0.72,
+            confidence: 0.7,
             reasoning:
-              'Duration matches (4 weeks) and the reported reduction (22%) is in range of the claimed 20%, with stats language in the write-up. Still a first pass — evaluation signs off.',
+              'The write-up matches the 2-week window and reports a measured hydration lift with stats. First pass only.',
             model: 'hosted-demo',
             createdAt: now,
           },
@@ -47,27 +55,6 @@ function loadStore() {
 
 function saveStore(data) {
   localStorage.setItem(STORE, JSON.stringify(data));
-}
-
-function flatten(claims) {
-  const rows = [];
-  for (const c of claims) {
-    for (const a of c.assessments) {
-      rows.push({
-        id: a.id,
-        claimText: c.claimText,
-        formula: c.formula,
-        evidence: a.evidence,
-        justified: a.justified,
-        confidence: a.confidence,
-        reasoning: a.reasoning,
-        model: a.model,
-        createdAt: a.createdAt,
-      });
-    }
-  }
-  rows.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
-  return rows;
 }
 
 function judge(dto) {
@@ -119,29 +106,55 @@ export async function listProducts() {
     const name = r.productName?.trim();
     if (!name || seen.has(name)) continue;
     seen.add(name);
-    out.push({ name, formula: r.formula });
+    const waiting = rows.some(
+      (c) => c.productName === name && (!c.assessments || c.assessments.length === 0),
+    );
+    out.push({ name, formula: r.formula, waiting });
   }
   return out;
 }
 
-export async function history(product) {
+export async function listClaims(product) {
   if (!product) return [];
   if (!DEMO) {
     const res = await fetch(`${API}?product=${encodeURIComponent(product)}`);
     if (!res.ok) return [];
-    return flatten(await res.json());
+    return res.json();
   }
-  return flatten(
-    loadStore().claims.filter((c) => c.productName === product),
-  );
+  return loadStore().claims.filter((c) => c.productName === product);
 }
 
-export async function assess(body) {
+export async function submitClaim(body) {
   if (!DEMO) {
-    const res = await fetch(`${API}/assess`, {
+    const res = await fetch(API, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(body),
+    });
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok) throw new Error(String(data.message || 'Submit failed'));
+    return data;
+  }
+  const claim = {
+    id: crypto.randomUUID(),
+    productName: body.productName,
+    formula: body.formula,
+    claimText: body.claimText,
+    createdAt: new Date().toISOString(),
+    assessments: [],
+  };
+  const store = loadStore();
+  store.claims.push(claim);
+  saveStore(store);
+  return claim;
+}
+
+export async function attachStudy(claimId, evidence) {
+  if (!DEMO) {
+    const res = await fetch(`${API}/${claimId}/assess`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ evidence }),
     });
     const data = await res.json().catch(() => ({}));
     if (!res.ok) {
@@ -153,28 +166,26 @@ export async function assess(body) {
     return data.assessment;
   }
 
-  const judged = judge(body);
-  const now = new Date().toISOString();
-  const claim = {
-    id: crypto.randomUUID(),
-    productName: body.productName,
-    formula: body.formula,
-    claimText: body.claimText,
-    createdAt: now,
-    assessments: [],
-  };
+  const store = loadStore();
+  const claim = store.claims.find((c) => c.id === claimId);
+  if (!claim) throw new Error('claim not found');
+  const judged = judge({
+    claimText: claim.claimText,
+    evidence,
+    productName: claim.productName,
+    formula: claim.formula,
+  });
   const assessment = {
     id: crypto.randomUUID(),
-    evidence: body.evidence,
+    evidence,
     justified: judged.justified,
     confidence: judged.confidence,
     reasoning: judged.reasoning,
     model: judged.model,
-    createdAt: now,
+    createdAt: new Date().toISOString(),
   };
+  claim.assessments = claim.assessments || [];
   claim.assessments.push(assessment);
-  const store = loadStore();
-  store.claims.push(claim);
   saveStore(store);
   return assessment;
 }
