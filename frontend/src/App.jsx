@@ -2,9 +2,9 @@ import { useEffect, useState } from 'react';
 
 const API = 'http://localhost:3000/api/claims';
 
-const BLANK = {
-  productName: '',
-  formula: '',
+const EXAMPLE = {
+  productName: 'Revitalift test batch',
+  formula: 'retinol 0.3%, HA 1%',
   claimText: 'Reduces wrinkles by 20% in 4 weeks',
   evidence:
     'Split-face instrumental study, 72 women, 4 weeks. Mean wrinkle volume reduced 22% versus vehicle, p<0.05. Corneometer hydration also up, not claimed.',
@@ -15,9 +15,9 @@ export default function App() {
   const [products, setProducts] = useState([]);
   const [productName, setProductName] = useState('');
   const [isNew, setIsNew] = useState(false);
-  const [formula, setFormula] = useState(BLANK.formula);
-  const [claimText, setClaimText] = useState(BLANK.claimText);
-  const [evidence, setEvidence] = useState(BLANK.evidence);
+  const [formula, setFormula] = useState(EXAMPLE.formula);
+  const [claimText, setClaimText] = useState(EXAMPLE.claimText);
+  const [evidence, setEvidence] = useState(EXAMPLE.evidence);
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState('');
   const [result, setResult] = useState(null);
@@ -70,10 +70,10 @@ export default function App() {
 
   function startNew() {
     setIsNew(true);
-    setProductName('');
-    setFormula(BLANK.formula);
-    setClaimText(BLANK.claimText);
-    setEvidence(BLANK.evidence);
+    setProductName(EXAMPLE.productName);
+    setFormula(EXAMPLE.formula);
+    setClaimText(EXAMPLE.claimText);
+    setEvidence(EXAMPLE.evidence);
     setHistory([]);
     setResult(null);
     setErr('');
