@@ -1,9 +1,12 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 
-const API = 'http://localhost:3000/api/claims/assess';
+const API = 'http://localhost:3000/api/claims';
+const NEW = '__new__';
 
 export default function App() {
-  const [productName, setProductName] = useState('Revitalift test batch');
+  const [products, setProducts] = useState([]);
+  const [picked, setPicked] = useState(NEW);
+  const [productName, setProductName] = useState('');
   const [formula, setFormula] = useState('retinol 0.3%, HA 1%');
   const [claimText, setClaimText] = useState(
     'Reduces wrinkles by 20% in 4 weeks',
@@ -14,17 +17,74 @@ export default function App() {
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState('');
   const [result, setResult] = useState(null);
+  const [history, setHistory] = useState([]);
+
+  async function loadProducts() {
+    const res = await fetch(`${API}/products`);
+    if (!res.ok) return;
+    setProducts(await res.json());
+  }
+
+  async function loadHistory(name) {
+    if (!name) {
+      setHistory([]);
+      return;
+    }
+    const res = await fetch(`${API}?product=${encodeURIComponent(name)}`);
+    if (!res.ok) return;
+    const claims = await res.json();
+    const rows = [];
+    for (const c of claims) {
+      for (const a of c.assessments) {
+        rows.push({
+          id: a.id,
+          claimText: c.claimText,
+          formula: c.formula,
+          evidence: a.evidence,
+          justified: a.justified,
+          confidence: a.confidence,
+          reasoning: a.reasoning,
+          createdAt: a.createdAt,
+        });
+      }
+    }
+    rows.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
+    setHistory(rows);
+  }
+
+  useEffect(() => {
+    loadProducts().catch(() => {});
+  }, []);
+
+  function onPick(value) {
+    setPicked(value);
+    setResult(null);
+    if (value === NEW) {
+      setProductName('');
+      setHistory([]);
+      return;
+    }
+    setProductName(value);
+    const known = products.find((p) => p.name === value);
+    if (known?.formula) setFormula(known.formula);
+    loadHistory(value).catch(() => {});
+  }
 
   async function onSubmit(e) {
     e.preventDefault();
+    const name = productName.trim();
+    if (!name) {
+      setErr('Pick a product, or type a new one.');
+      return;
+    }
     setErr('');
     setResult(null);
     setBusy(true);
     try {
-      const res = await fetch(API, {
+      const res = await fetch(`${API}/assess`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ productName, formula, claimText, evidence }),
+        body: JSON.stringify({ productName: name, formula, claimText, evidence }),
       });
       const data = await res.json().catch(() => ({}));
       if (!res.ok) {
@@ -35,6 +95,9 @@ export default function App() {
         return;
       }
       setResult(data.assessment);
+      setPicked(name);
+      await loadProducts();
+      await loadHistory(name);
     } catch {
       setErr('Cannot reach the API — is the backend up on :3000?');
     } finally {
@@ -64,11 +127,25 @@ export default function App() {
           <form onSubmit={onSubmit}>
             <label>
               Product
-              <input
-                value={productName}
-                onChange={(e) => setProductName(e.target.value)}
-              />
+              <select value={picked} onChange={(e) => onPick(e.target.value)}>
+                <option value={NEW}>New product…</option>
+                {products.map((p) => (
+                  <option key={p.name} value={p.name}>
+                    {p.name}
+                  </option>
+                ))}
+              </select>
             </label>
+            {picked === NEW && (
+              <label>
+                New product name
+                <input
+                  value={productName}
+                  onChange={(e) => setProductName(e.target.value)}
+                  placeholder="e.g. Revitalift test batch"
+                />
+              </label>
+            )}
             <label>
               Formula
               <input
@@ -102,11 +179,11 @@ export default function App() {
             {err && <p className="err">{err}</p>}
           </form>
 
-          <section className={'result' + (result ? ' has' : '')}>
-            {!result && (
+          <section className={'result' + (result || history.length ? ' has' : '')}>
+            {!result && !history.length && (
               <p className="placeholder">
                 Assessment will show here — Justified, Confidence Score,
-                Reasoning.
+                Reasoning. Pick a product to see past reads.
               </p>
             )}
             {result && (
@@ -127,6 +204,30 @@ export default function App() {
                 <h3>Reasoning</h3>
                 <p>{result.reasoning}</p>
               </>
+            )}
+            {history.length > 0 && (
+              <div className="history">
+                <h3>History · {productName}</h3>
+                <ul>
+                  {history.map((row) => (
+                    <li key={row.id}>
+                      <button
+                        type="button"
+                        className="hist"
+                        onClick={() => setResult(row)}
+                      >
+                        <span className={row.justified ? 'yes' : 'no'}>
+                          {row.justified ? 'Yes' : 'No'}
+                        </span>
+                        <span className="hist-claim">{row.claimText}</span>
+                        <span className="hist-when">
+                          {new Date(row.createdAt).toLocaleString()}
+                        </span>
+                      </button>
+                    </li>
+                  ))}
+                </ul>
+              </div>
             )}
           </section>
         </div>

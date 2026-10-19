@@ -7,6 +7,32 @@ import { AssessClaimDto } from './assess.dto';
 export class ClaimsService {
   constructor(private readonly db: PrismaService) {}
 
+  async listProducts() {
+    const rows = await this.db.claim.findMany({
+      orderBy: { updatedAt: 'desc' },
+      select: { productName: true, formula: true },
+    });
+    const seen = new Set<string>();
+    const out: { name: string; formula: string | null }[] = [];
+    for (const r of rows) {
+      const name = r.productName?.trim();
+      if (!name || seen.has(name)) continue;
+      seen.add(name);
+      out.push({ name, formula: r.formula });
+    }
+    return out;
+  }
+
+  history(product: string) {
+    return this.db.claim.findMany({
+      where: { productName: product },
+      orderBy: { createdAt: 'desc' },
+      include: {
+        assessments: { orderBy: { createdAt: 'desc' } },
+      },
+    });
+  }
+
   async assess(dto: AssessClaimDto) {
     const claim = await this.db.claim.create({
       data: {
