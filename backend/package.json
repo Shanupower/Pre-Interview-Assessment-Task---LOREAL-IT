@@ -15,6 +15,7 @@
     "@prisma/client": "^6.16.2",
     "class-transformer": "^0.5.1",
     "class-validator": "^0.14.2",
+    "openai": "^7.39.0",
     "reflect-metadata": "^0.2.2",
     "rxjs": "^7.8.2"
   },
@@ -31,7 +32,11 @@
     "typescript": "^5.9.2"
   },
   "jest": {
-    "moduleFileExtensions": ["js", "json", "ts"],
+    "moduleFileExtensions": [
+      "js",
+      "json",
+      "ts"
+    ],
     "rootDir": "src",
     "testRegex": ".*\\.spec\\.ts$",
     "transform": {
