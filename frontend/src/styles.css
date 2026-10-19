@@ -54,6 +54,16 @@ body {
   color: #eee;
 }
 
+.key-note {
+  margin: 0;
+  padding: 8px 28px;
+  background: #f7f3ec;
+  border-bottom: 1px solid #e5ddd0;
+  font-size: 11px;
+  line-height: 1.45;
+  color: #5c5348;
+}
+
 .page {
   max-width: 1080px;
   margin: 0 auto;

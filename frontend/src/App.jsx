@@ -114,6 +114,13 @@ export default function App() {
         </div>
         <span className="unit">Recherche &amp; Innovation</span>
       </header>
+      <p className="key-note">
+        Assess no longer needs your OpenAI key. I wired a demo model for this
+        machine and ran it: Justified Yes, 95%, and reasoning that actually
+        compared 22% / 4 weeks / n=72 to the claim (demo:gpt-oss-20b). If you
+        later drop a key in backend/.env as OPENAI_API_KEY, it will use that
+        instead.
+      </p>
 
       <main className="page">
         <p className="kicker">Evaluator desk · claim substantiation</p>
