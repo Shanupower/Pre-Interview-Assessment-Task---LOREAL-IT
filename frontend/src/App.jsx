@@ -2,22 +2,14 @@ import { useEffect, useState } from 'react';
 
 const API = 'http://localhost:3000/api/claims';
 
-const EXAMPLE = {
-  productName: 'Revitalift test batch',
-  formula: 'retinol 0.3%, HA 1%',
-  claimText: 'Reduces wrinkles by 20% in 4 weeks',
-  evidence:
-    'Split-face instrumental study, 72 women, 4 weeks. Mean wrinkle volume reduced 22% versus vehicle, p<0.05. Corneometer hydration also up, not claimed.',
-};
-
 export default function App() {
   const [screen, setScreen] = useState('list');
   const [products, setProducts] = useState([]);
   const [productName, setProductName] = useState('');
   const [isNew, setIsNew] = useState(false);
-  const [formula, setFormula] = useState(EXAMPLE.formula);
-  const [claimText, setClaimText] = useState(EXAMPLE.claimText);
-  const [evidence, setEvidence] = useState(EXAMPLE.evidence);
+  const [formula, setFormula] = useState('');
+  const [claimText, setClaimText] = useState('');
+  const [evidence, setEvidence] = useState('');
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState('');
   const [result, setResult] = useState(null);
@@ -70,10 +62,10 @@ export default function App() {
 
   function startNew() {
     setIsNew(true);
-    setProductName(EXAMPLE.productName);
-    setFormula(EXAMPLE.formula);
-    setClaimText(EXAMPLE.claimText);
-    setEvidence(EXAMPLE.evidence);
+    setProductName('');
+    setFormula('');
+    setClaimText('');
+    setEvidence('');
     setHistory([]);
     setResult(null);
     setErr('');
@@ -213,6 +205,7 @@ export default function App() {
                     rows={2}
                     value={claimText}
                     onChange={(e) => setClaimText(e.target.value)}
+                    placeholder="e.g. Reduces wrinkles by 20% in 4 weeks"
                   />
                 </label>
                 <label>
@@ -223,6 +216,7 @@ export default function App() {
                     rows={5}
                     value={evidence}
                     onChange={(e) => setEvidence(e.target.value)}
+                    placeholder="Paste the clinical write-up"
                   />
                 </label>
                 <button type="submit" disabled={busy}>
