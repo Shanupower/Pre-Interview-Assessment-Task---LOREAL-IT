@@ -303,6 +303,12 @@ export default function App() {
                     </dl>
                     <h3>Reasoning</h3>
                     <p>{result.reasoning}</p>
+                    {result.evidence && (
+                      <>
+                        <h3>Clinical study results</h3>
+                        <p className="study">{result.evidence}</p>
+                      </>
+                    )}
                     {result.model && <p className="model">{result.model}</p>}
                   </>
                 )}
@@ -322,6 +328,7 @@ export default function App() {
                                 {a.justified ? 'Yes' : 'No'}
                               </span>
                               <span className="hist-claim">{c.claimText}</span>
+                              <span className="hist-study">{a.evidence}</span>
                               <span className="hist-when">
                                 {new Date(a.createdAt).toLocaleString()}
                               </span>

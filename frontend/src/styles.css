@@ -386,6 +386,14 @@ button.hist:hover {
   color: #333;
 }
 
+.hist-study,
+.study {
+  white-space: pre-wrap;
+  color: #555;
+  font-size: 13px;
+  line-height: 1.5;
+}
+
 .hist-when {
   font-size: 11px;
   color: #8a7a62;
