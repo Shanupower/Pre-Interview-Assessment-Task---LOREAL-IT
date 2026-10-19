@@ -99,48 +99,79 @@ h1 {
 form {
   display: flex;
   flex-direction: column;
-  gap: 14px;
+  gap: 16px;
 }
 
 label {
   display: flex;
   flex-direction: column;
-  gap: 6px;
+  gap: 7px;
+  color: #555;
+}
+
+label > span {
   font-size: 11px;
   letter-spacing: 0.16em;
   text-transform: uppercase;
-  color: #555;
 }
 
 input,
 textarea,
 select {
+  display: block;
+  width: 100%;
   font-family: Helvetica, Arial, sans-serif;
   font-size: 14px;
-  letter-spacing: 0;
+  font-weight: 400;
+  letter-spacing: normal;
   text-transform: none;
-  padding: 9px 0 8px;
-  border: 0;
-  border-bottom: 1px solid #111;
-  background: transparent;
+  line-height: 1.4;
   color: #111;
+  background: #fff;
+  border: 1px solid #cfc6b8;
   border-radius: 0;
-  width: 100%;
+  padding: 10px 12px;
 }
 
 select {
+  height: 42px;
   cursor: pointer;
+  appearance: none;
+  -webkit-appearance: none;
+  background-color: #fff;
+  background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='12' height='8'><path fill='%23111' d='M0 0l6 8 6-8z'/></svg>");
+  background-repeat: no-repeat;
+  background-position: right 12px center;
+  background-size: 10px 7px;
+  padding-right: 34px;
+}
+
+select option {
+  font-family: Helvetica, Arial, sans-serif;
+  font-size: 14px;
+  letter-spacing: normal;
+  text-transform: none;
+  color: #111;
+  background: #fff;
+}
+
+input::placeholder,
+textarea::placeholder {
+  color: #9a9084;
+  letter-spacing: normal;
+  text-transform: none;
 }
 
 input:focus,
 textarea:focus,
 select:focus {
   outline: none;
-  border-bottom-color: #c4a574;
+  border-color: #c4a574;
 }
 
 textarea {
   resize: vertical;
+  min-height: 92px;
 }
 
 button {

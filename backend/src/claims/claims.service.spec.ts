@@ -3,6 +3,7 @@ import { ClaimsService } from './claims.service';
 describe('ClaimsService', () => {
   it('saves justified / confidence / reasoning from the model pass', async () => {
     delete process.env.OPENAI_API_KEY;
+    global.fetch = jest.fn().mockRejectedValue(new Error('offline'));
 
     const claimRow = { id: 'c1' };
     const assessmentRow = { id: 'a1', justified: true, confidence: 0.72, reasoning: 'ok' };

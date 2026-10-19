@@ -126,7 +126,7 @@ export default function App() {
         <div className="work">
           <form onSubmit={onSubmit}>
             <label>
-              Product
+              <span>Product</span>
               <select value={picked} onChange={(e) => onPick(e.target.value)}>
                 <option value={NEW}>New product…</option>
                 {products.map((p) => (
@@ -138,7 +138,7 @@ export default function App() {
             </label>
             {picked === NEW && (
               <label>
-                New product name
+                <span>New product name</span>
                 <input
                   value={productName}
                   onChange={(e) => setProductName(e.target.value)}
@@ -147,14 +147,14 @@ export default function App() {
               </label>
             )}
             <label>
-              Formula
+              <span>Formula</span>
               <input
                 value={formula}
                 onChange={(e) => setFormula(e.target.value)}
               />
             </label>
             <label>
-              Claim
+              <span>Claim</span>
               <textarea
                 required
                 minLength={10}
@@ -164,7 +164,7 @@ export default function App() {
               />
             </label>
             <label>
-              Clinical evidence
+              <span>Clinical evidence</span>
               <textarea
                 required
                 minLength={20}
